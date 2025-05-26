@@ -1,5 +1,4 @@
 import logging
-import os
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
 
@@ -225,18 +224,13 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
 def main() -> None:
     """Start the bot."""
-    # Get token from environment variable for security
-    token = os.getenv('BOT_TOKEN', '7552188554:AAFMQ8DbThjqkmYbJ35eneAW6-QKiqjyuO0')
-    
-    application = Application.builder().token(token).build()
+    # BuildUpEnglish Bot Token
+    application = Application.builder().token("7552188554:AAFMQ8DbThjqkmYbJ35eneAW6-QKiqjyuO0").build()
 
     # Add handlers
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CallbackQueryHandler(button_callback))
 
-    # Get port for Railway deployment
-    port = int(os.environ.get('PORT', 8000))
-    
     # Run the bot
     application.run_polling()
 
