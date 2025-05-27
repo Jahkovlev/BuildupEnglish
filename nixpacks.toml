@@ -1,0 +1,12 @@
+# nixpacks.toml
+providers = ["python"]
+
+[phases.setup]
+nixPkgs = ["python311", "python311Packages.pip"]
+
+[phases.install]
+dependsOn = ["setup"]
+cmds = ["python -m pip install -r requirements.txt"]
+
+[start]
+cmd = "python main.py"
