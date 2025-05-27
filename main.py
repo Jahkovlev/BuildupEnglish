@@ -319,6 +319,12 @@ def main() -> None:
         print("Please set BOT_TOKEN in your Railway environment variables.")
         sys.exit(1)
     
+    # Print debug info on startup
+    print("[STARTUP DEBUG] Bot starting...")
+    print(f"[STARTUP DEBUG] Available exercise types: {list(EXERCISES.keys())}")
+    for ex_type, ex_data in EXERCISES.items():
+        print(f"[STARTUP DEBUG] Type '{ex_type}' has exercises: {list(ex_data['exercises'].keys())}")
+    
     application = Application.builder().token(TOKEN).build()
 
     # Add handlers
