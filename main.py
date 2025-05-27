@@ -237,8 +237,15 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
 def main() -> None:
     """Start the bot."""
-    # BuildUpEnglish Bot Token
-    application = Application.builder().token("7552188554:AAFMQ8DbThjqkmYbJ35eneAW6-QKiqjyuO0").build()
+    # Get token from environment variable
+    TOKEN = os.environ.get("BOT_TOKEN")
+    
+    if not TOKEN:
+        print("ERROR: BOT_TOKEN environment variable not set!")
+        print("Please set BOT_TOKEN in your Railway environment variables.")
+        sys.exit(1)
+    
+    application = Application.builder().token(TOKEN).build()
 
     # Add handlers
     application.add_handler(CommandHandler("start", start))
