@@ -144,8 +144,8 @@ async def show_exercise(update: Update, context: ContextTypes.DEFAULT_TYPE, exer
     if example_idx < 0 or example_idx >= len(examples):
         example_idx = 0
     
-    # Check if this is the last example
-    if example_idx == len(examples) - 1:
+    # Check if user clicked "Next" on the last example
+    if example_idx >= len(examples):
         # User has completed the exercise!
         await query.edit_message_text(
             f"🎉 **CONGRATULATIONS!** 🎉\n\n"
@@ -171,8 +171,12 @@ async def show_exercise(update: Update, context: ContextTypes.DEFAULT_TYPE, exer
     if example_idx > 0:
         nav_row.append(InlineKeyboardButton("⬅️ Back", callback_data=f"nav_{exercise_type}_{exercise_key}_{example_idx-1}"))
     
-    # Next button
-    nav_row.append(InlineKeyboardButton("Next ➡️", callback_data=f"nav_{exercise_type}_{exercise_key}_{example_idx+1}"))
+    # Next button - check if it's the last example
+    if example_idx < len(examples) - 1:
+        nav_row.append(InlineKeyboardButton("Next ➡️", callback_data=f"nav_{exercise_type}_{exercise_key}_{example_idx+1}"))
+    else:
+        # Last example - clicking next will show congratulations
+        nav_row.append(InlineKeyboardButton("Finish ✅", callback_data=f"nav_{exercise_type}_{exercise_key}_{example_idx+1}"))
     
     if nav_row:
         keyboard.append(nav_row)
@@ -223,17 +227,29 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     elif data.startswith("ex_"):
         # Start an exercise
         parts = data.split("_", 2)
-        exercise_type = parts[1]
-        exercise_key = parts[2]
-        await show_exercise(update, context, exercise_type, exercise_key, 0)
+        if len(parts) == 3:
+            exercise_type = parts[1]
+            exercise_key = parts[2]
+            await show_exercise(update, context, exercise_type, exercise_key, 0)
+        else:
+            # Handle old format (shouldn't happen with current code)
+            await query.answer("Invalid exercise format. Please go back to main menu.")
     
     elif data.startswith("nav_"):
         # Navigate within an exercise
         parts = data.split("_")
-        exercise_type = parts[1]
-        exercise_key = parts[2]
-        example_idx = int(parts[3])
-        await show_exercise(update, context, exercise_type, exercise_key, example_idx)
+        if len(parts) >= 4:
+            exercise_type = parts[1]
+            exercise_key = parts[2]
+            # Join remaining parts in case exercise_key had underscores
+            if len(parts) > 4:
+                exercise_key = "_".join(parts[2:-1])
+                example_idx = int(parts[-1])
+            else:
+                example_idx = int(parts[3])
+            await show_exercise(update, context, exercise_type, exercise_key, example_idx)
+        else:
+            await query.answer("Navigation error. Please try again.")
 
 def main() -> None:
     """Start the bot."""
