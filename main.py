@@ -93,6 +93,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Send the main menu when the command /start is issued."""
     keyboard = []
     
+    # Add debug button
+    keyboard.append([InlineKeyboardButton("🔍 Debug Info", callback_data="debug_info")])
+    
     # Add exercise types
     for ex_type_key, ex_type_data in EXERCISES.items():
         keyboard.append([InlineKeyboardButton(ex_type_data["name"], callback_data=f"type_{ex_type_key}")])
@@ -110,6 +113,8 @@ async def show_exercise_list(update: Update, context: ContextTypes.DEFAULT_TYPE,
     query = update.callback_query
     await query.answer()
     
+    print(f"[DEBUG] show_exercise_list called with exercise_type: {exercise_type}")
+    
     if exercise_type not in EXERCISES:
         await query.edit_message_text("Exercise type not found.")
         return
@@ -118,7 +123,9 @@ async def show_exercise_list(update: Update, context: ContextTypes.DEFAULT_TYPE,
     exercises = EXERCISES[exercise_type]["exercises"]
     
     for ex_key, ex_data in exercises.items():
-        keyboard.append([InlineKeyboardButton(ex_data["title"], callback_data=f"ex_{exercise_type}_{ex_key}")])
+        callback_data = f"ex_{exercise_type}_{ex_key}"
+        print(f"[DEBUG] Creating button with callback_data: {callback_data}")
+        keyboard.append([InlineKeyboardButton(ex_data["title"], callback_data=callback_data)])
     
     keyboard.append([InlineKeyboardButton("🏠 Main Menu", callback_data="main_menu")])
     
@@ -218,8 +225,31 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     data = query.data
     
     # Debug logging
-    print(f"Button callback received: {data}")
+    print(f"[DEBUG] Button callback received: {data}")
     logger.info(f"Button callback received: {data}")
+    
+    # Test button to show debug info
+    if data == "debug_info":
+        debug_msg = (
+            f"**Debug Information:**\n\n"
+            f"Available exercise types: {list(EXERCISES.keys())}\n\n"
+        )
+        for ex_type, ex_data in EXERCISES.items():
+            debug_msg += f"Type: {ex_type}\n"
+            debug_msg += f"Exercises: {list(ex_data['exercises'].keys())}\n\n"
+        
+        keyboard = [
+            [InlineKeyboardButton("🧪 Test Exercise Directly", callback_data="test_exercise")],
+            [InlineKeyboardButton("🏠 Main Menu", callback_data="main_menu")]
+        ]
+        
+        await query.answer()
+        await query.edit_message_text(
+            debug_msg,
+            parse_mode='Markdown',
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+        return
     
     if data == "main_menu":
         # Show main menu
@@ -234,6 +264,11 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             "Choose an exercise type to start learning:",
             reply_markup=reply_markup
         )
+    
+    elif data == "test_exercise":
+        # Direct test of the exercise
+        await show_exercise(update, context, "all_grammar_one_sentence", "she_paints_house", 0)
+        return
     
     elif data.startswith("type_"):
         # Show exercises for this type
