@@ -134,12 +134,19 @@ async def show_exercise(update: Update, context: ContextTypes.DEFAULT_TYPE, exer
     query = update.callback_query
     await query.answer()
     
+    print(f"show_exercise called - type: '{exercise_type}', key: '{exercise_key}', idx: {example_idx}")
+    print(f"Available exercises: {list(EXERCISES.keys())}")
     logger.info(f"show_exercise called - type: {exercise_type}, key: {exercise_key}, idx: {example_idx}")
     logger.info(f"Available exercises: {list(EXERCISES.keys())}")
+    
     if exercise_type in EXERCISES:
+        print(f"Exercise keys for {exercise_type}: {list(EXERCISES[exercise_type]['exercises'].keys())}")
         logger.info(f"Exercise keys for {exercise_type}: {list(EXERCISES[exercise_type]['exercises'].keys())}")
     
     if exercise_type not in EXERCISES or exercise_key not in EXERCISES[exercise_type]["exercises"]:
+        print(f"Exercise not found! Type '{exercise_type}' in EXERCISES: {exercise_type in EXERCISES}")
+        if exercise_type in EXERCISES:
+            print(f"Key '{exercise_key}' in exercises: {exercise_key in EXERCISES[exercise_type]['exercises']}")
         await query.edit_message_text("Exercise not found.")
         return
     
@@ -211,6 +218,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     data = query.data
     
     # Debug logging
+    print(f"Button callback received: {data}")
     logger.info(f"Button callback received: {data}")
     
     if data == "main_menu":
@@ -234,15 +242,18 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     
     elif data.startswith("ex_"):
         # Start an exercise
+        print(f"Exercise callback parts: {data.split('_')}")
         logger.info(f"Exercise callback parts: {data.split('_')}")
         parts = data.split("_", 2)
         if len(parts) == 3:
             exercise_type = parts[1]
             exercise_key = parts[2]
+            print(f"Starting exercise - type: {exercise_type}, key: {exercise_key}")
             logger.info(f"Starting exercise - type: {exercise_type}, key: {exercise_key}")
             await show_exercise(update, context, exercise_type, exercise_key, 0)
         else:
             # Handle old format (shouldn't happen with current code)
+            print(f"Invalid format - parts: {parts}")
             await query.answer("Invalid exercise format. Please go back to main menu.")
             await query.edit_message_text("Invalid exercise format. Please go back to main menu.",
                 reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🏠 Main Menu", callback_data="main_menu")]]))
