@@ -99,6 +99,7 @@ EXERCISES = {
 # Bot handlers
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Send welcome message when /start command is issued"""
+    logger.info("Start command received")
     user = update.effective_user
     welcome_text = (
         f"👋 Welcome {user.first_name}!\n\n"
@@ -116,6 +117,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Display the main menu"""
+    logger.info("Showing main menu")
     text = (
         "📚 Main Menu\n\n"
         "Choose an exercise type to begin:"
@@ -130,6 +132,7 @@ async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
 async def show_exercise_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Display exercise description and start button"""
+    logger.info("Showing exercise menu")
     query = update.callback_query
     await query.answer()
     
@@ -151,6 +154,7 @@ async def show_exercise_menu(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
 async def show_example(update: Update, context: ContextTypes.DEFAULT_TYPE, index: int) -> None:
     """Display a specific example"""
+    logger.info(f"Showing example {index}")
     query = update.callback_query
     await query.answer()
     
@@ -207,31 +211,42 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     query = update.callback_query
     data = query.data
     
-    logger.info(f"Callback data: {data}")
+    logger.info(f"Callback data received: {data}")
     
-    if data == "main":
-        await show_main_menu(update, context)
-    elif data == "type_0":
-        await show_exercise_menu(update, context)
-    elif data == "ex_0":
-        await show_example(update, context, 0)
-    elif data.startswith("nav_"):
-        # Extract index from callback data
-        try:
+    try:
+        if data == "main":
+            await show_main_menu(update, context)
+        elif data == "type_0":
+            await show_exercise_menu(update, context)
+        elif data == "ex_0":
+            await show_example(update, context, 0)
+        elif data.startswith("nav_"):
+            # Extract index from callback data
             index = int(data.split("_")[1])
             await show_example(update, context, index)
-        except (ValueError, IndexError):
-            logger.error(f"Invalid navigation data: {data}")
-            await query.answer("Error: Invalid navigation")
+        else:
+            logger.warning(f"Unknown callback data: {data}")
+            await query.answer("Unknown action")
+    except Exception as e:
+        logger.error(f"Error in button_callback: {str(e)}")
+        await query.answer("An error occurred. Please try again.")
 
 async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Log errors"""
-    logger.warning(f'Update {update} caused error {context.error}')
+    logger.error(f'Update {update} caused error {context.error}')
+
+async def post_init(application: Application) -> None:
+    """Initialize the bot - delete any existing webhooks"""
+    logger.info("Initializing bot...")
+    await application.bot.delete_webhook(drop_pending_updates=True)
+    logger.info("Webhook deleted (if any existed)")
 
 def main() -> None:
     """Start the bot"""
+    logger.info("Starting bot...")
+    
     # Create application
-    application = Application.builder().token(BOT_TOKEN).build()
+    application = Application.builder().token(BOT_TOKEN).post_init(post_init).build()
     
     # Register handlers
     application.add_handler(CommandHandler("start", start))
@@ -240,16 +255,26 @@ def main() -> None:
     # Register error handler
     application.add_error_handler(error_handler)
     
-    # Get port from Railway or default
-    port = int(os.environ.get("PORT", 8080))
+    # Check if we're running on Railway
+    railway_domain = os.environ.get("RAILWAY_PUBLIC_DOMAIN")
     
-    # Start webhook for Railway deployment
-    application.run_webhook(
-        listen="0.0.0.0",
-        port=port,
-        url_path=BOT_TOKEN,
-        webhook_url=f"https://{os.environ.get('RAILWAY_PUBLIC_DOMAIN', 'localhost')}/{BOT_TOKEN}"
-    )
+    if railway_domain:
+        # Railway deployment - use webhook
+        logger.info(f"Running on Railway with domain: {railway_domain}")
+        port = int(os.environ.get("PORT", 8080))
+        
+        # Start webhook
+        application.run_webhook(
+            listen="0.0.0.0",
+            port=port,
+            url_path=BOT_TOKEN,
+            webhook_url=f"https://{railway_domain}/{BOT_TOKEN}",
+            drop_pending_updates=True
+        )
+    else:
+        # Local development - use polling
+        logger.info("Running in polling mode (local development)")
+        application.run_polling(allowed_updates=Update.ALL_TYPES, drop_pending_updates=True)
 
 if __name__ == '__main__':
     main()
